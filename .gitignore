@@ -1,0 +1,30 @@
+.DS_Store
+*.swp
+*.tmp
+.idea/
+.vscode/
+
+# Estado local y secretos: nunca deben entrar al repositorio.
+auth.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+history.jsonl
+sessions/
+logs/
+
+# Credenciales y contenedores de claves.
+.env
+.env.*
+.netrc
+.npmrc
+.pypirc
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.pem
+*.p12
+*.pfx
+*.key
+*.kdbx

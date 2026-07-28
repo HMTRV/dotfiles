@@ -1,0 +1,70 @@
+#!/bin/sh
+
+set -eu
+
+dotfiles_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+usage() {
+  printf '%s\n' \
+    "Uso:" \
+    "  ~/dotfiles/bin/sync          # revisar actualizaciones" \
+    "  ~/dotfiles/bin/sync --apply  # aplicar después de revisar"
+}
+
+case "${1:-}" in
+  '')
+    apply=0
+    ;;
+  --apply)
+    apply=1
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
+remote_url=$(git -C "$dotfiles_dir" remote get-url origin)
+case "$remote_url" in
+  https://github.com/HMTRV/dotfiles.git|git@github.com:HMTRV/dotfiles.git)
+    ;;
+  *)
+    printf 'ERROR: remoto origin inesperado: %s\n' "$remote_url" >&2
+    exit 1
+    ;;
+esac
+
+git -C "$dotfiles_dir" fetch --prune origin main
+
+local_revision=$(git -C "$dotfiles_dir" rev-parse HEAD)
+remote_revision=$(git -C "$dotfiles_dir" rev-parse origin/main)
+if [ "$local_revision" = "$remote_revision" ]; then
+  printf '%s\n' "No hay actualizaciones remotas."
+  exit 0
+fi
+
+git -C "$dotfiles_dir" merge-base --is-ancestor HEAD origin/main || {
+  printf '%s\n' "ERROR: la actualización no es fast-forward." >&2
+  exit 1
+}
+
+if [ "$apply" -eq 0 ]; then
+  printf '%s\n' "Actualizaciones disponibles:"
+  git -C "$dotfiles_dir" log --oneline --decorate HEAD..origin/main
+  git -C "$dotfiles_dir" diff --stat HEAD..origin/main
+  printf '%s\n' \
+    "" \
+    "Revisa con: git -C ~/dotfiles diff HEAD..origin/main" \
+    "Aplica con: ~/dotfiles/bin/sync --apply"
+  exit 0
+fi
+
+git -C "$dotfiles_dir" -c core.hooksPath=/dev/null merge --ff-only origin/main
+"$dotfiles_dir/install.sh" --skip-packages
+"$dotfiles_dir/bin/check"
+
+printf '%s\n' "Dotfiles actualizados desde el remoto."

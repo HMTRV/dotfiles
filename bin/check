@@ -1,0 +1,106 @@
+#!/bin/sh
+
+set -eu
+
+dotfiles_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+tmux_tmp_dir=
+tmux_socket=
+tmux_started=0
+
+cleanup() {
+  if [ "$tmux_started" -eq 1 ]; then
+    tmux -S "$tmux_socket" kill-server >/dev/null 2>&1 || true
+  fi
+  if [ -n "$tmux_tmp_dir" ]; then
+    rmdir "$tmux_tmp_dir" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+sh -n \
+  "$dotfiles_dir/install.sh" \
+  "$dotfiles_dir/bin/check" \
+  "$dotfiles_dir/bin/publish" \
+  "$dotfiles_dir/bin/sync" \
+  "$dotfiles_dir/config/tmux/scripts/copy.sh" \
+  "$dotfiles_dir/config/tmux/scripts/wg_status.sh"
+printf '%s\n' "OK  sintaxis shell"
+
+if command -v bash >/dev/null 2>&1; then
+  bash -n "$dotfiles_dir/scripts/bootstrap-kali-dotfiles.sh"
+  printf '%s\n' "OK  sintaxis Bash del bootstrap de Kali"
+else
+  printf '%s\n' "SKIP bootstrap de Kali (bash no disponible)"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 -c 'import pathlib, sys, tomllib; tomllib.loads(pathlib.Path(sys.argv[1]).read_text())' \
+    "$dotfiles_dir/config/alacritty/alacritty.toml"
+  printf '%s\n' "OK  sintaxis TOML de Alacritty"
+else
+  printf '%s\n' "SKIP sintaxis TOML (python3 no disponible)"
+fi
+
+if command -v rg >/dev/null 2>&1; then
+  if rg -n '/Users/[^/]+|/opt/homebrew|/usr/local/Homebrew' \
+    "$dotfiles_dir/config" "$dotfiles_dir/codex"; then
+    printf '%s\n' "ERROR: se encontraron rutas locales no portables" >&2
+    exit 1
+  fi
+else
+  if grep -ERn '/Users/[^/]+|/opt/homebrew|/usr/local/Homebrew' \
+    "$dotfiles_dir/config" "$dotfiles_dir/codex"; then
+    printf '%s\n' "ERROR: se encontraron rutas locales no portables" >&2
+    exit 1
+  fi
+fi
+printf '%s\n' "OK  rutas portables"
+
+personal_mail='enzomaiben''@gmail\.com'
+private_network='100\.64\.''123'
+private_home='/Users/''enzomaiben'
+github_token='g''h[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}'
+sensitive_pattern="BEGIN ((RSA|DSA|EC|OPENSSH) )?(ENCRYPTED )?PRIVATE KEY|BEGIN PGP PRIVATE KEY BLOCK|${github_token}|A(KIA|SIA)[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{30,}|xox[baprs]-[0-9A-Za-z-]{10,}|npm_[A-Za-z0-9]{20,}|sk_live_[0-9A-Za-z]{16,}|eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.|(secret|token|password|passwd|api[_-]?key)[[:space:]]*[:=][[:space:]]*['\"]?[A-Za-z0-9/+=._-]{12,}|${personal_mail}|${private_network}|${private_home}"
+if command -v rg >/dev/null 2>&1; then
+  if rg --hidden -n -I "$sensitive_pattern" \
+    "$dotfiles_dir" --glob '!.git/**' --glob '!bin/check'; then
+    printf '%s\n' "ERROR: se encontró información no apta para el repositorio público" >&2
+    exit 1
+  fi
+else
+  if grep -ERn --exclude-dir=.git --exclude=check \
+    "$sensitive_pattern" "$dotfiles_dir"; then
+    printf '%s\n' "ERROR: se encontró información no apta para el repositorio público" >&2
+    exit 1
+  fi
+fi
+printf '%s\n' "OK  contenido apto para repositorio público"
+
+unsafe_files=$(find "$dotfiles_dir" -path "$dotfiles_dir/.git" -prune -o \
+  -type f \( \
+    -name '.env' -o -name '.env.*' -o -name '.netrc' -o -name '.npmrc' -o \
+    -name '.pypirc' -o -name 'id_rsa' -o -name 'id_dsa' -o \
+    -name 'id_ecdsa' -o -name 'id_ed25519' -o -name '*.pem' -o \
+    -name '*.p12' -o -name '*.pfx' -o -name '*.key' -o -name '*.kdbx' \
+  \) -print)
+if [ -n "$unsafe_files" ]; then
+  printf '%s\n' "$unsafe_files" >&2
+  printf '%s\n' "ERROR: se encontraron archivos con nombres sensibles" >&2
+  exit 1
+fi
+printf '%s\n' "OK  nombres de archivo seguros"
+
+if command -v tmux >/dev/null 2>&1; then
+  tmux_tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-tmux.XXXXXX")
+  tmux_socket="$tmux_tmp_dir/server.sock"
+  tmux_started=1
+  tmux -S "$tmux_socket" -f "$dotfiles_dir/config/tmux/tmux.conf" \
+    new-session -d -s dotfiles-check
+  tmux -S "$tmux_socket" source-file "$dotfiles_dir/config/tmux/tmux.conf"
+  tmux -S "$tmux_socket" show-options -gqv prefix >/dev/null
+  printf '%s\n' "OK  configuración tmux"
+else
+  printf '%s\n' "SKIP configuración tmux (tmux no disponible)"
+fi
+
+printf '%s\n' "Todos los controles pasaron."
