@@ -1,0 +1,14 @@
+.DS_Store
+*.swp
+*.tmp
+.idea/
+.vscode/
+
+# Estado local y secretos: nunca deben entrar al repositorio.
+auth.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+history.jsonl
+sessions/
+logs/

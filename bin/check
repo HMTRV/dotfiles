@@ -1,0 +1,85 @@
+#!/bin/sh
+
+set -eu
+
+dotfiles_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+tmux_socket="dotfiles-check-$$"
+tmux_started=0
+
+cleanup() {
+  if [ "$tmux_started" -eq 1 ]; then
+    tmux -L "$tmux_socket" kill-server >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+sh -n \
+  "$dotfiles_dir/install.sh" \
+  "$dotfiles_dir/bin/check" \
+  "$dotfiles_dir/bin/publish" \
+  "$dotfiles_dir/bin/sync" \
+  "$dotfiles_dir/config/tmux/scripts/copy.sh" \
+  "$dotfiles_dir/config/tmux/scripts/wg_status.sh"
+printf '%s\n' "OK  sintaxis shell"
+
+if command -v bash >/dev/null 2>&1; then
+  bash -n "$dotfiles_dir/scripts/bootstrap-kali-dotfiles.sh"
+  printf '%s\n' "OK  sintaxis Bash del bootstrap de Kali"
+else
+  printf '%s\n' "SKIP bootstrap de Kali (bash no disponible)"
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  python3 -c 'import pathlib, sys, tomllib; tomllib.loads(pathlib.Path(sys.argv[1]).read_text())' \
+    "$dotfiles_dir/config/alacritty/alacritty.toml"
+  printf '%s\n' "OK  sintaxis TOML de Alacritty"
+else
+  printf '%s\n' "SKIP sintaxis TOML (python3 no disponible)"
+fi
+
+if command -v rg >/dev/null 2>&1; then
+  if rg -n '/Users/[^/]+|/opt/homebrew|/usr/local/Homebrew' \
+    "$dotfiles_dir/config" "$dotfiles_dir/codex"; then
+    printf '%s\n' "ERROR: se encontraron rutas locales no portables" >&2
+    exit 1
+  fi
+else
+  if grep -ERn '/Users/[^/]+|/opt/homebrew|/usr/local/Homebrew' \
+    "$dotfiles_dir/config" "$dotfiles_dir/codex"; then
+    printf '%s\n' "ERROR: se encontraron rutas locales no portables" >&2
+    exit 1
+  fi
+fi
+printf '%s\n' "OK  rutas portables"
+
+personal_mail='enzomaiben''@gmail\.com'
+private_network='100\.64\.''123'
+private_home='/Users/''enzomaiben'
+sensitive_pattern="BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|github_pat_|ghp_|AKIA[0-9A-Z]{16}|${personal_mail}|${private_network}|${private_home}"
+if command -v rg >/dev/null 2>&1; then
+  if rg -n -I "$sensitive_pattern" \
+    "$dotfiles_dir" --glob '!.git/**' --glob '!bin/check'; then
+    printf '%s\n' "ERROR: se encontró información no apta para el repositorio público" >&2
+    exit 1
+  fi
+else
+  if grep -ERn --exclude-dir=.git --exclude=check \
+    "$sensitive_pattern" "$dotfiles_dir"; then
+    printf '%s\n' "ERROR: se encontró información no apta para el repositorio público" >&2
+    exit 1
+  fi
+fi
+printf '%s\n' "OK  contenido apto para repositorio público"
+
+if command -v tmux >/dev/null 2>&1; then
+  tmux_started=1
+  tmux -L "$tmux_socket" -f "$dotfiles_dir/config/tmux/tmux.conf" \
+    new-session -d -s dotfiles-check
+  tmux -L "$tmux_socket" source-file "$dotfiles_dir/config/tmux/tmux.conf"
+  tmux -L "$tmux_socket" show-options -gqv prefix >/dev/null
+  printf '%s\n' "OK  configuración tmux"
+else
+  printf '%s\n' "SKIP configuración tmux (tmux no disponible)"
+fi
+
+printf '%s\n' "Todos los controles pasaron."

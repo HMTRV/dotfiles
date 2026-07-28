@@ -1,0 +1,47 @@
+#!/bin/sh
+
+set -eu
+
+dotfiles_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+if [ "$#" -ne 1 ] || [ -z "$1" ]; then
+  printf '%s\n' 'Uso: ~/dotfiles/bin/publish "descripción breve"' >&2
+  exit 2
+fi
+
+author_email=$(git -C "$dotfiles_dir" config user.email || true)
+case "$author_email" in
+  *@users.noreply.github.com)
+    ;;
+  *)
+    printf '%s\n' \
+      "Configura un correo noreply antes de publicar:" \
+      'git config user.email "USUARIO@users.noreply.github.com"' >&2
+    exit 1
+    ;;
+esac
+
+"$dotfiles_dir/bin/check"
+
+git -C "$dotfiles_dir" add -- \
+  .gitattributes \
+  .gitignore \
+  AGENTS.md \
+  Brewfile \
+  README.md \
+  bin \
+  codex \
+  config \
+  install.sh \
+  scripts
+
+git -C "$dotfiles_dir" diff --cached --check
+
+if git -C "$dotfiles_dir" diff --cached --quiet; then
+  printf '%s\n' "No hay cambios para publicar."
+  exit 0
+fi
+
+git -C "$dotfiles_dir" diff --cached --stat
+git -C "$dotfiles_dir" commit -m "$1"
+git -C "$dotfiles_dir" push

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eu
+
+dotfiles_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+git -C "$dotfiles_dir" pull --ff-only
+"$dotfiles_dir/install.sh" --skip-packages
+"$dotfiles_dir/bin/check"
+
+printf '%s\n' "Dotfiles actualizados desde el remoto."

@@ -1,0 +1,185 @@
+[general]
+live_config_reload = true
+
+[env]
+TERM = "alacritty"
+
+# Usar un login shell evita fijar el prefijo de Homebrew, que cambia entre
+# Apple Silicon e Intel. El shell resuelve tmux desde el PATH de cada Mac.
+[terminal.shell]
+program = "/bin/zsh"
+args = ["-lc", "exec tmux new-session -A -s main"]
+
+[window]
+decorations = "Buttonless"
+decorations_theme_variant = "Dark"
+dynamic_padding = false
+opacity = 0.94
+blur = true
+startup_mode = "Windowed"
+resize_increments = true
+option_as_alt = "Both"
+
+[window.dimensions]
+columns = 82
+lines = 24
+
+[window.padding]
+x = 20
+y = 18
+
+[scrolling]
+history = 12000
+multiplier = 3
+
+[font]
+size = 24.0
+builtin_box_drawing = true
+
+[font.normal]
+family = "JetBrainsMono Nerd Font Mono"
+style = "Regular"
+
+[font.bold]
+family = "JetBrainsMono Nerd Font Mono"
+style = "SemiBold"
+
+[font.italic]
+family = "JetBrainsMono Nerd Font Mono"
+style = "Italic"
+
+[font.bold_italic]
+family = "JetBrainsMono Nerd Font Mono"
+style = "SemiBold Italic"
+
+[font.offset]
+x = 0
+y = 2
+
+[font.glyph_offset]
+x = 0
+y = 1
+
+[colors]
+draw_bold_text_with_bright_colors = false
+
+[colors.primary]
+background = "#0d0d0c"
+foreground = "#ece5d8"
+dim_foreground = "#a9a196"
+bright_foreground = "#fff7ea"
+
+[colors.cursor]
+text = "#0d0d0c"
+cursor = "#d84a3a"
+
+[colors.vi_mode_cursor]
+text = "#0d0d0c"
+cursor = "#caa96a"
+
+[colors.selection]
+text = "#fff7ea"
+background = "#34302b"
+
+[colors.search.matches]
+foreground = "#0d0d0c"
+background = "#caa96a"
+
+[colors.search.focused_match]
+foreground = "#0d0d0c"
+background = "#d84a3a"
+
+[colors.footer_bar]
+foreground = "#ece5d8"
+background = "#1a1916"
+
+[colors.hints.start]
+foreground = "#0d0d0c"
+background = "#caa96a"
+
+[colors.hints.end]
+foreground = "#caa96a"
+background = "#1a1916"
+
+[colors.normal]
+black = "#141412"
+red = "#c05a50"
+green = "#72856f"
+yellow = "#c4a064"
+blue = "#6f8ca5"
+magenta = "#a27d96"
+cyan = "#79a7a5"
+white = "#d8d2c4"
+
+[colors.bright]
+black = "#514c44"
+red = "#e06d5f"
+green = "#8fa88a"
+yellow = "#e0bd78"
+blue = "#8aa9c0"
+magenta = "#c099b2"
+cyan = "#97c7c2"
+white = "#fff7ea"
+
+[colors.dim]
+black = "#0d0d0c"
+red = "#85443f"
+green = "#53624f"
+yellow = "#8d754d"
+blue = "#53697b"
+magenta = "#725c6d"
+cyan = "#557674"
+white = "#a9a196"
+
+[[colors.indexed_colors]]
+index = 16
+color = "#d84a3a"
+
+[[colors.indexed_colors]]
+index = 17
+color = "#b73f33"
+
+[bell]
+animation = "EaseOutExpo"
+duration = 0
+color = "#d84a3a"
+
+[cursor]
+blink_interval = 450
+blink_timeout = 0
+unfocused_hollow = true
+thickness = 0.18
+
+[cursor.style]
+shape = "Beam"
+blinking = "On"
+
+[cursor.vi_mode_style]
+shape = "Block"
+blinking = "Off"
+
+[mouse]
+hide_when_typing = true
+
+[selection]
+save_to_clipboard = true
+
+[[keyboard.bindings]]
+key = "N"
+mods = "Command"
+action = "CreateNewWindow"
+
+[[keyboard.bindings]]
+key = "T"
+mods = "Command"
+chars = "\u0002c"
+
+[[keyboard.bindings]]
+key = "F"
+mods = "Command"
+action = "SearchForward"
+
+[[keyboard.bindings]]
+key = "K"
+mods = "Command"
+action = "ClearHistory"
